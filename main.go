@@ -1,42 +1,61 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"fmt"
+	"log"
 	"os"
 )
 
-func readFile(path string) []byte {
-	f, err := os.Open(path)
-	if err != nil {
-		fmt.Println("Error when opening file:", err)
-	}
-
-	info, _ := f.Stat()
-	size := info.Size()
-	buffer := make([]byte, size)
-	f.Read(buffer)
-	return buffer
-}
+var logger = log.New(os.Stderr, "ERROR: ", log.LstdFlags)
 
 func hashFile(path string) []byte {
-	data := readFile(path)
-	sum := sha256.Sum256(data)
-	return sum[:]
+	f, err := os.Open(path)
+	if err != nil {
+		logger.Printf("Error when opening file %s: %v", path, err)
+		return nil
+	}
+	defer f.Close()
+
+	reader := bufio.NewReader(f)
+	hasher := sha256.New()
+
+	buf := make([]byte, 4096)
+	for {
+		n, err := reader.Read(buf)
+		if n > 0 {
+			hasher.Write(buf[:n])
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	return hasher.Sum(nil)
 }
 
 func main() {
-	file1 := os.Args[1]
-	file2 := os.Args[2]
+	if len(os.Args) < 2 {
+		logger.Println("No file to analyze")
+		return
+	}
 
-	hash1 := hashFile(file1)
-	fmt.Println(hash1)
-	hash2 := hashFile(file2)
-	fmt.Println(hash2)
+	hashes := make(map[string][]string)
 
-	if string(hash1) == string(hash2) {
-		fmt.Println("Identiques") // 1 et 3 identiques, 2 unique
-	} else {
-		fmt.Println("Différents")
+	for _, path := range os.Args[1:] {
+		hash := hashFile(path)
+		if hash == nil {
+			continue
+		}
+		key := string(hash)
+		hashes[key] = append(hashes[key], path)
+	}
+
+	fmt.Println("Unique files :")
+	for _, paths := range hashes {
+		if len(paths) == 1 {
+			fmt.Println(" -", paths[0])
+		}
 	}
 }
