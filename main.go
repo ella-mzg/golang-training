@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var logger = log.New(os.Stderr, "ERROR: ", log.LstdFlags)
@@ -50,25 +51,30 @@ func hashBytes(data []byte) []byte {
 }
 
 func downloadAndSave(url string) (string, []byte) {
+	start := time.Now()
+
 	resp, err := http.Get(url)
 	if err != nil {
-		logger.Printf("Error when downloading %s: %v", url, err)
+		logger.Printf("Erreur téléchargement %s: %v", url, err)
 		return "", nil
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Printf("Error when reading response %s: %v", url, err)
+		logger.Printf("Erreur lecture réponse %s: %v", url, err)
 		return "", nil
 	}
+
+	duration := time.Since(start)
+	fmt.Printf("Téléchargement de %s terminé en %v\n", url, duration)
 
 	name := filepath.Base(url)
 	localPath := filepath.Join(os.TempDir(), name)
 
 	f, err := os.Create(localPath)
 	if err != nil {
-		logger.Printf("Error when writing %s: %v", localPath, err)
+		logger.Printf("Erreur écriture %s: %v", localPath, err)
 		return "", nil
 	}
 	defer f.Close()
