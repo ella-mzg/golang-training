@@ -1,21 +1,42 @@
 package main
 
 import (
-	"flag"
+	"crypto/sha256"
 	"fmt"
-	// "os"
+	"os"
 )
 
-const VERSION = "1.0"
+func readFile(path string) []byte {
+	f, err := os.Open(path)
+	if err != nil {
+		fmt.Println("Error when opening file:", err)
+	}
+
+	info, _ := f.Stat()
+	size := info.Size()
+	buffer := make([]byte, size)
+	f.Read(buffer)
+	return buffer
+}
+
+func hashFile(path string) []byte {
+	data := readFile(path)
+	sum := sha256.Sum256(data)
+	return sum[:]
+}
 
 func main() {
-	fmt.Println("Hello World!")
+	file1 := os.Args[1]
+	file2 := os.Args[2]
 
-	showVersion := flag.Bool("version", false, "Show version")
+	hash1 := hashFile(file1)
+	fmt.Println(hash1)
+	hash2 := hashFile(file2)
+	fmt.Println(hash2)
 
-	flag.Parse()
-
-	if *showVersion {
-		fmt.Println("Version:", VERSION)
+	if string(hash1) == string(hash2) {
+		fmt.Println("Identiques") // 1 et 3 identiques, 2 unique
+	} else {
+		fmt.Println("Différents")
 	}
 }
