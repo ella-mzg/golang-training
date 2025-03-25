@@ -25,9 +25,28 @@ func run() error {
 	}
 }
 
+// func PrintIt(input interface{}) {
+// 	fmt.Println(input)
+// }
+
+func PrintIt(input interface{}) {
+	switch v := input.(type) {
+	case int:
+		fmt.Println("This is an int :", v)
+	case string:
+		fmt.Println("This is a string :", v)
+	default:
+		fmt.Println("This is not an int nor a string :", v)
+	}
+}
+
 func main() {
 	err := run()
 	if err != nil {
-		fmt.Println("Erreur :", err)
+		fmt.Println("Error :", err)
 	}
+
+	PrintIt(42)
+	PrintIt("Hello world")
+	PrintIt(3.14)
 }
