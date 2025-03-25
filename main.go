@@ -1,45 +1,39 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"strconv"
 )
 
-type ColorGroup struct {
-	ID     int
-	Name   string
-	Colors []string `json:"colors,omitempty"`
+type IPAddr []byte
+
+func (ip IPAddr) String() string {
+	return fmt.Sprintf("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3])
 }
-type Animal struct {
-	Name  string
-	Order string
+
+func joinIP(ip IPAddr) string {
+	result := ""
+	for i, b := range ip {
+		if i > 0 {
+			result += "."
+		}
+		result += strconv.Itoa(int(b))
+	}
+	return result
 }
 
 func main() {
-	// // Colors
-	// group := ColorGroup{
-	// 	ID:     1,
-	// 	Name:   "Reds",
-	// 	Colors: []string{"Crimson", "Red", "Ruby", "Maroon"},
-	// }
-	// b, err := json.Marshal(group)
-	// if err != nil {
-	// 	fmt.Println("error:", err)
-	// }
-	// fmt.Println(string(b))
-
-	// Animals
-	var jsonBlob = []byte(
-		`[
-		{"Name": "Platypus", "Order": "Monotremata"},
-		{"Name": "Quoll", "Order": "Dasyuromorphia"}
-	]`)
-	var animals []Animal
-	err := json.Unmarshal(jsonBlob, &animals)
-
-	if err != nil {
-		fmt.Println("error:", err)
+	hosts := map[string]IPAddr{
+		"loopback":  {127, 0, 0, 1},
+		"googleDNS": {8, 8, 8, 8},
 	}
-	// fmt.Println("%+v", animals)
-	fmt.Printf("%v", animals)
+	for name, ip := range hosts {
+		fmt.Printf("%v: %v\n", name, ip)
+	}
+
+	// ip := IPAddr{1, 2, 3, 4}
+	// fmt.Println(ip)
+
+	// s := joinIP(ip)
+	// fmt.Println(s)
 }
