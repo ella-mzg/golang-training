@@ -1,120 +1,45 @@
 package main
 
 import (
-	"bufio"
-	"crypto/sha256"
-	"flag"
+	"encoding/json"
 	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
-var logger = log.New(os.Stderr, "ERROR: ", log.LstdFlags)
-
-var urlList = flag.String("urls", "", "URLs list")
-
-// go run main.go -urls "https://1000logos.net/wp-content/uploads/2016/10/Android-Logo-768x432.png,https://1000logos.net/wp-content/uploads/2016/10/Android-Logo-768x432.png,https://1000logos.net/wp-content/uploads/2017/06/Windows-Logo.png"
-
-func hashFile(path string) []byte {
-	f, err := os.Open(path)
-	if err != nil {
-		logger.Printf("Failed to open %s: %v", path, err)
-		return nil
-	}
-	defer f.Close()
-
-	reader := bufio.NewReader(f)
-	hasher := sha256.New()
-
-	buf := make([]byte, 4096)
-	for {
-		n, err := reader.Read(buf)
-		if n > 0 {
-			hasher.Write(buf[:n])
-		}
-		if err != nil {
-			break
-		}
-	}
-
-	return hasher.Sum(nil)
+type ColorGroup struct {
+	ID     int
+	Name   string
+	Colors []string `json:"colors,omitempty"`
 }
-
-func hashBytes(data []byte) []byte {
-	sum := sha256.Sum256(data)
-	return sum[:]
-}
-
-func downloadAndSave(url string) (string, []byte) {
-	start := time.Now()
-
-	resp, err := http.Get(url)
-	if err != nil {
-		logger.Printf("Failed to download %s: %v", url, err)
-		return "", nil
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Printf("Failed to read response %s: %v", url, err)
-		return "", nil
-	}
-
-	duration := time.Since(start)
-	fmt.Printf("Downloaded %s in %v\n", url, duration)
-
-	name := filepath.Base(url)
-	localPath := filepath.Join(os.TempDir(), name)
-
-	f, err := os.Create(localPath)
-	if err != nil {
-		logger.Printf("Error when writing %s: %v", localPath, err)
-		return "", nil
-	}
-	defer f.Close()
-
-	f.Write(data)
-
-	return localPath, data
+type Animal struct {
+	Name  string
+	Order string
 }
 
 func main() {
-	flag.Parse()
+	// // Colors
+	// group := ColorGroup{
+	// 	ID:     1,
+	// 	Name:   "Reds",
+	// 	Colors: []string{"Crimson", "Red", "Ruby", "Maroon"},
+	// }
+	// b, err := json.Marshal(group)
+	// if err != nil {
+	// 	fmt.Println("error:", err)
+	// }
+	// fmt.Println(string(b))
 
-	hashes := make(map[string][]string)
+	// Animals
+	var jsonBlob = []byte(
+		`[
+		{"Name": "Platypus", "Order": "Monotremata"},
+		{"Name": "Quoll", "Order": "Dasyuromorphia"}
+	]`)
+	var animals []Animal
+	err := json.Unmarshal(jsonBlob, &animals)
 
-	for _, path := range flag.Args() {
-		hash := hashFile(path)
-		if hash == nil {
-			continue
-		}
-		key := string(hash)
-		hashes[key] = append(hashes[key], path)
+	if err != nil {
+		fmt.Println("error:", err)
 	}
-
-	if *urlList != "" {
-		urls := strings.Split(*urlList, ",")
-		for _, url := range urls {
-			path, data := downloadAndSave(url)
-			if data == nil {
-				continue
-			}
-			hash := hashBytes(data)
-			key := string(hash)
-			hashes[key] = append(hashes[key], fmt.Sprintf("%s (=> %s)", url, path))
-		}
-	}
-
-	fmt.Println("Unique images :")
-	for _, paths := range hashes {
-		if len(paths) == 1 {
-			fmt.Println(" -", paths[0])
-		}
-	}
+	// fmt.Println("%+v", animals)
+	fmt.Printf("%v", animals)
 }
