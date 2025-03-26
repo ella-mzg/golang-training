@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"sync"
+	"io"
+	"net/http"
 )
 
 type Response struct {
@@ -10,31 +11,33 @@ type Response struct {
 	err      error
 }
 
-func run(c chan Response) {
-	resp := Response{
-		respText: "Hello from goroutine!",
-		err:      nil,
+func callServer(addr string, ch chan Response) {
+	resp, err := http.Get(addr)
+	if err != nil {
+		ch <- Response{respText: "", err: err}
+		return
 	}
-	c <- resp
-}
+	defer resp.Body.Close()
 
-func myFunction(wg *sync.WaitGroup) {
-	defer wg.Done()
-	fmt.Println("It's over")
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		ch <- Response{respText: "", err: err}
+		return
+	}
+
+	ch <- Response{respText: string(body), err: nil}
 }
 
 func main() {
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go myFunction(&wg)
-
 	ch := make(chan Response)
 
-	go run(ch)
+	go callServer("https://github.com/ella-mzg", ch)
 
 	result := <-ch
-	fmt.Println("Received:", result.respText)
 
-	wg.Wait()
+	if result.err != nil {
+		fmt.Println("Error :", result.err)
+	} else {
+		fmt.Println("Response :", result.respText)
+	}
 }
