@@ -3,39 +3,54 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 )
 
 type User struct {
+	ID       string `json:"userID"`
 	Login    string `json:"userName"`
 	Password string
 }
 
+var usersMap = make(map[string]User)
+
+// func handleUser(w http.ResponseWriter, r *http.Request) {
+// 	id := r.URL.Query().Get("id")
+// 	if user, ok := usersMap[id]; ok {
+// 		json.NewEncoder(w).Encode(user)
+// 	} else {
+// 		http.Error(w, "User not found", http.StatusNotFound)
+// 	}
+// }
+
+func handleUser(w http.ResponseWriter, r *http.Request) {
+	id := r.FormValue("id")
+
+	if user, ok := usersMap[id]; ok {
+		json.NewEncoder(w).Encode(user)
+	} else {
+		http.Error(w, "User not found", http.StatusNotFound)
+	}
+}
+
 func main() {
-	u := User{
-		Login:    "Pierre",
-		Password: "pass012", // lowercase 'p'assword = ignored during unmarshaling
-	}
-
-	jsonData, err := json.Marshal(u)
-	if err != nil {
-		fmt.Println("Error serializing:", err)
-		return
-	}
-
-	fmt.Println(string(jsonData))
 	data, err := os.ReadFile("users.json")
 	if err != nil {
-		fmt.Println("Error reading file:", err)
-		return
+		log.Fatal("Reading error :", err)
 	}
 
 	var users []User
-	err = json.Unmarshal(data, &users)
-	if err != nil {
-		fmt.Println("Error parsing JSON:", err)
-		return
+	if err := json.Unmarshal(data, &users); err != nil {
+		log.Fatal("Parsing error :", err)
 	}
 
-	fmt.Println(users)
+	for _, user := range users {
+		usersMap[user.ID] = user
+	}
+
+	http.HandleFunc("/user", handleUser)
+	fmt.Println("Server running on http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
