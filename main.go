@@ -16,6 +16,19 @@ type User struct {
 
 var usersMap = make(map[string]User)
 
+func respondJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+
+	if data != nil {
+		json.NewEncoder(w).Encode(data)
+	}
+}
+
+func respondError(w http.ResponseWriter, status int, message string) {
+	respondJSON(w, status, map[string]string{"error": message})
+}
+
 // func handleUser(w http.ResponseWriter, r *http.Request) {
 // 	id := r.URL.Query().Get("id")
 // 	if user, ok := usersMap[id]; ok {
@@ -27,13 +40,42 @@ var usersMap = make(map[string]User)
 
 func handleUser(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
-
 	if user, ok := usersMap[id]; ok {
-		json.NewEncoder(w).Encode(user)
+		respondJSON(w, http.StatusOK, user)
 	} else {
-		http.Error(w, "User not found", http.StatusNotFound)
+		respondError(w, http.StatusNotFound, "User not found")
 	}
 }
+
+// func handleUser(w http.ResponseWriter, r *http.Request) {
+// 	id := r.FormValue("id")
+
+// 	// w.Header().Set(
+// 	// 	"Content-Type",
+// 	// 	"application/json; charset=utf-8",
+// 	// )
+
+// 	// if user, ok := usersMap[id]; ok {
+// 	// 	w.WriteHeader(http.StatusOK)
+// 	// 	json.NewEncoder(w).Encode(user)
+// 	// } else {
+// 	// 	w.WriteHeader(http.StatusNotFound)
+// 	// 	http.Error(w, "User not found", http.StatusNotFound)
+// 	// }
+
+// 	if user, ok := usersMap[id]; ok {
+// 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+// 		w.WriteHeader(http.StatusOK)
+
+// 		userJson, err := json.Marshal(user)
+// 		if err != nil {
+// 			http.Error(w, "Error", http.StatusInternalServerError)
+// 			return
+// 		}
+
+// 		w.Write(userJson)
+// 	}
+// }
 
 func main() {
 	data, err := os.ReadFile("users.json")
