@@ -5,6 +5,19 @@ import (
 	"sync"
 )
 
+type Response struct {
+	respText string
+	err      error
+}
+
+func run(c chan Response) {
+	resp := Response{
+		respText: "Hello from goroutine!",
+		err:      nil,
+	}
+	c <- resp
+}
+
 func myFunction(wg *sync.WaitGroup) {
 	defer wg.Done()
 	fmt.Println("It's over")
@@ -12,14 +25,16 @@ func myFunction(wg *sync.WaitGroup) {
 
 func main() {
 	var wg sync.WaitGroup
-
 	wg.Add(1)
 
 	go myFunction(&wg)
 
-	fmt.Println("End of program")
+	ch := make(chan Response)
+
+	go run(ch)
+
+	result := <-ch
+	fmt.Println("Received:", result.respText)
 
 	wg.Wait()
 }
-
-// go tool dist list
