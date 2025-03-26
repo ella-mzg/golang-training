@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 type Response struct {
@@ -18,6 +20,14 @@ func callServer(addr string, ch chan Response) {
 		return
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		ch <- Response{
+			respText: "",
+			err:      errors.New("Error: " + strconv.Itoa(resp.StatusCode)),
+		}
+		return
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
