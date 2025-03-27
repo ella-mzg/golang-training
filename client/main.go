@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 )
 
 type Response struct {
@@ -14,66 +15,56 @@ type Response struct {
 	err      error
 }
 
-func callServer(addr string, ch chan Response) {
+func callServer(addr string, ch chan Response, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	resp, err := http.Get(addr)
 	if err != nil {
-		ch <- Response{addr: addr, respText: "", err: err}
+		ch <- Response{addr: addr, err: err}
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		ch <- Response{
-			addr:     addr,
-			respText: "",
-			err:      errors.New("HTTP Error: " + strconv.Itoa(resp.StatusCode)),
+			addr: addr,
+			err:  errors.New("HTTP error: " + strconv.Itoa(resp.StatusCode)),
 		}
 		return
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		ch <- Response{addr: addr, respText: "", err: err}
+		ch <- Response{addr: addr, err: err}
 		return
 	}
 
-	ch <- Response{addr: addr, respText: string(body), err: nil}
+	ch <- Response{addr: addr, respText: string(body)}
 }
 
 func main() {
-	ch1 := make(chan Response)
-	ch2 := make(chan Response)
+	urls := []string{
+		"http://localhost:8000/?id=1",
+		"http://localhost:8000/?id=2",
+		"http://localhost:8000/?id=3",
+	}
 
-	go callServer("http://localhost:8000/?id=1", ch1)
-	go callServer("http://localhost:8000/?id=2", ch2)
+	var wg sync.WaitGroup
+	ch := make(chan Response, len(urls))
+	for _, url := range urls {
+		wg.Add(1)
+		go callServer(url, ch, &wg)
+	}
 
-	select {
-	case res := <-ch1:
-		fmt.Println("Fastest endpoint:", res.addr)
-		if res.err != nil {
-			fmt.Println("Error:", res.err)
-		} else {
-			fmt.Println("Response:", res.respText)
-		}
-	case res := <-ch2:
-		fmt.Println("Fastest endpoint:", res.addr)
+	wg.Wait()
+	close(ch)
+
+	for res := range ch {
+		fmt.Println("URL:", res.addr)
 		if res.err != nil {
 			fmt.Println("Error:", res.err)
 		} else {
 			fmt.Println("Response:", res.respText)
 		}
 	}
-
-	// res1 := <-ch1
-	// res2 := <-ch2
-
-	// for _, res := range []Response{res1, res2} {
-	// 	fmt.Println("🔗 URL:", res.addr)
-	// 	if res.err != nil {
-	// 		fmt.Println("Error:", res.err)
-	// 	} else {
-	// 		fmt.Println("Response:", res.respText)
-	// 	}
-	// 	fmt.Println()
-	// }
 }
